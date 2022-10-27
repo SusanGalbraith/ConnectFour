@@ -1,2 +1,0 @@
-# ConnectFour
-Kotlin example program
