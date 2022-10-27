@@ -1,16 +1,26 @@
 package connectfour
 
+class BoardDimensions {
+    var rows: Int = 6
+    var columns: Int = 7
+}
+
+class Player {
+    var name: String = ""
+    var score: Int = 0
+}
+
 fun main() {
     println("Connect Four")
-    println("First Player's name:")
-    val firstPlayerName = readln()
-    println("Second Player's name:")
-    val secondPlayerName = readln()
+    playConnectFour()
+    println("Game over!")
+}
 
-    //parse board dimensions
-    var rows = 6
-    var columns = 7
+//get board dimensions from user
+fun getBoardDimensions(): BoardDimensions {
+    var boardDimensions: BoardDimensions = BoardDimensions()
     var dimensionsSet = false
+
     while (!dimensionsSet) {
         println("Set the board dimensions (Rows x Columns)")
         println("Press Enter for default (6 x 7)")
@@ -34,14 +44,14 @@ fun main() {
                     dimensionsSet = false
                 }
                 else {
-                    rows = dimensionList[0].trim().toInt()
-                    columns = dimensionList[1].trim().toInt()
+                    boardDimensions.rows = dimensionList[0].trim().toInt()
+                    boardDimensions.columns = dimensionList[1].trim().toInt()
 
-                    if (rows < 5 || rows > 9) {
+                    if (boardDimensions.rows < 5 || boardDimensions.rows > 9) {
                         println("Board rows should be from 5 to 9")
                         dimensionsSet = false
                     }
-                    if (columns < 5 || columns > 9) {
+                    if (boardDimensions.columns < 5 || boardDimensions.columns > 9) {
                         println("Board columns should be from 5 to 9")
                         dimensionsSet = false
                     }
@@ -49,6 +59,11 @@ fun main() {
             }
         }
     }
+    return boardDimensions
+}
+
+//Get number of games from user
+fun getNumberOfGames(): Int {
     var numGames: Int = -1
     while (numGames == -1) {
         println("Do you want to play single or multiple games?")
@@ -67,22 +82,64 @@ fun main() {
             }
         }
     }
+    return numGames
+}
 
-    println("$firstPlayerName VS $secondPlayerName")
-    println("$rows x $columns board")
+//Create the board given the dimensions
+fun creatBoard(boardDimensions: BoardDimensions): MutableList<MutableList<Char>> {
+    var boardRow = mutableListOf<Char>()
+    val board = mutableListOf(boardRow)
+    for (i in 1..boardDimensions.columns) {
+        boardRow += ' '
+    }
+    for (j in 1 until boardDimensions.rows) {
+        board.add(boardRow.toMutableList())
+    }
+    return board
+}
+
+//Print the board with any moves that have been played
+fun printBoard(boardDimensions: BoardDimensions, board: MutableList<MutableList<Char>>) {
+    for (i in 1..boardDimensions.columns) {
+        print(" $i")
+    }
+    println()
+    for (i in 1..boardDimensions.rows) {
+        for (j in 1..boardDimensions.columns) {
+            print("║" + board[i-1][j-1])
+        }
+        println("║")
+    }
+    print ("╚")
+    for (i in 1..boardDimensions.columns-1) {
+        print("═╩")
+    }
+    println("═╝")
+}
+
+//Gather user input and play the game
+fun playConnectFour() {
     var currGameNum=1
-    var firstPlayerScore = 0
-    var secondPlayerScore = 0
+    var firstPlayer: Player = Player()
+    var secondPlayer: Player = Player()
+    println("First Player's name:")
+    firstPlayer.name = readln()
+    println("Second Player's name:")
+    secondPlayer.name = readln()
+
+    var boardDimensions: BoardDimensions = getBoardDimensions()
+    var numGames: Int = getNumberOfGames()
+
+    println("${firstPlayer.name} VS ${secondPlayer.name}")
+    println("${boardDimensions.rows} x ${boardDimensions.columns} board")
 
     while (currGameNum <= numGames) {
-        if (numGames == 1) {
-            println("Single game")
-        }
-        else {
-            if (currGameNum == 1) {
-                println("Total $numGames games")
+        when (numGames) {
+            1 -> println("Single game")
+            else -> {
+                if (currGameNum == 1) println("Total $numGames games")
+                println("Game #$currGameNum")
             }
-            println("Game #$currGameNum")
         }
 
         //start game play
@@ -91,103 +148,81 @@ fun main() {
             1 -> true
             else -> false
         }
-        var gameIsOver = false
 
-        var boardRow = mutableListOf<Char>()
-        val board = mutableListOf(boardRow)
-        for (i in 1..columns) {
-            boardRow += ' '
+        playGame(boardDimensions, isFirstPlayerTurn, firstPlayer, secondPlayer)
+
+        currGameNum++
+    }
+}
+
+//Play a single game
+fun playGame(boardDimensions: BoardDimensions, isFirstPlayerTurn: Boolean, firstPlayer: Player, secondPlayer: Player) {
+    var gameIsOver = false
+    var isFirstPlayerTurn = isFirstPlayerTurn
+    val board = creatBoard(boardDimensions)
+    printBoard(boardDimensions, board)
+
+    while (!gameIsOver) {
+        when (isFirstPlayerTurn) {
+            true -> println("${firstPlayer.name}\'s turn:")
+            false -> println("${secondPlayer.name}\'s turn:")
         }
-        for (j in 1..rows - 1) {
-            board.add(boardRow.toMutableList())
-        }
-
-        //print the board
-        printBoard(rows, columns, board)
-
-        while (!gameIsOver) {
-            if (isFirstPlayerTurn) {
-                println("$firstPlayerName\'s turn:")
+        val play = readln()
+        if (play == "end") {
+            gameIsOver = true
+        } else {
+            if (play.toIntOrNull() == null) {
+                println("Incorrect column number")
+                continue
             } else {
-                println("$secondPlayerName\'s turn:")
-            }
-            val play = readln()
-            if (play == "end") {
-                gameIsOver = true
-            } else {
-                if (play.toIntOrNull() == null) {
-                    println("Incorrect column number")
+                val columnPlayed = play.toInt()
+                if (columnPlayed > boardDimensions.columns || columnPlayed < 1) {
+                    println("The column number is out of range (1 - ${boardDimensions.columns})")
+                    continue
+                }
+                //check if column is full
+                if (!board[0][columnPlayed - 1].isWhitespace()) {
+                    println("Column $columnPlayed is full")
                     continue
                 } else {
-                    val columnPlayed = play.toInt()
-                    if (columnPlayed > columns || columnPlayed < 1) {
-                        println("The column number is out of range (1 - $columns)")
-                        continue
+                    //find the next row open for that column
+                    var openRowNum = -1
+                    for (i in boardDimensions.rows - 1 downTo 0) {
+                        if (board[i][columnPlayed - 1].isWhitespace()) {
+                            openRowNum = i
+                            break
+                        }
                     }
-                    //check if column is full
-                    if (!board[0][columnPlayed - 1].isWhitespace()) {
-                        println("Column $columnPlayed is full")
-                        continue
-                    } else {
-                        //find the next row open for that column
-                        var openRowNum = -1
-                        for (i in rows - 1 downTo 0) {
-                            if (board[i][columnPlayed - 1].isWhitespace()) {
-                                openRowNum = i
-                                break
+                    //mark the play on the board
+                    board[openRowNum][columnPlayed - 1] = when (isFirstPlayerTurn) {
+                        true -> 'o'
+                        false -> '*'
+                    }
+
+                    printBoard(boardDimensions, board)
+                    val gameEval = checkIsGameOver(firstPlayer.name, secondPlayer.name, board)
+                    if (gameEval > 0) {
+                        when (gameEval) {
+                            1 -> firstPlayer.score += 2
+                            2 -> secondPlayer.score += 2
+                            3 -> {
+                                firstPlayer.score++
+                                secondPlayer.score++
                             }
                         }
-                        //mark the play on the board
-                        board[openRowNum][columnPlayed - 1] = when(isFirstPlayerTurn) {
-                            true -> 'o'
-                            false -> '*'
-                        }
-
-                        printBoard(rows, columns, board)
-                        val gameEval = checkIsGameOver(firstPlayerName, secondPlayerName, board)
-                        if (gameEval > 0) {
-                            when (gameEval) {
-                                1 -> firstPlayerScore += 2
-                                2 -> secondPlayerScore += 2
-                                3 -> {
-                                    firstPlayerScore++
-                                    secondPlayerScore++
-                                }
-                            }
-                            gameIsOver = true
-                            println("Score")
-                            println("$firstPlayerName: $firstPlayerScore $secondPlayerName: $secondPlayerScore")
-                        }
-
-                        isFirstPlayerTurn = !isFirstPlayerTurn
+                        gameIsOver = true
+                        println("Score")
+                        println("${firstPlayer.name}: ${firstPlayer.score} ${secondPlayer.name}: ${secondPlayer.score}")
                     }
+
+                    isFirstPlayerTurn = !isFirstPlayerTurn
                 }
             }
         }
-        currGameNum++
     }
-
-    println("Game over!")
-}
-//Print the board with any moves that have been played
-fun printBoard(rows: Int, columns: Int, board: MutableList<MutableList<Char>>) {
-    for (i in 1..columns) {
-        print(" $i")
-    }
-    println()
-    for (i in 1..rows) {
-        for (j in 1..columns) {
-            print("║" + board[i-1][j-1])
-        }
-        println("║")
-    }
-    print ("╚")
-    for (i in 1..columns-1) {
-        print("═╩")
-    }
-    println("═╝")
 }
 
+//Check if the game is won, or a tie
 fun checkIsGameOver(firstPlayerName: String, secondPlayerName: String, board: MutableList<MutableList<Char>>): Int {
     //check horizontals for win
     for (i in 0 until board.size) {
